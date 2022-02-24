@@ -4,27 +4,36 @@
 // System Headers
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include "shader.cpp"
+
 
 // Standard Headers
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
 
+using namespace std;
+
+string currentPath = "/Users/talosguo/Glitter/Glitter/Sources/";
+
 const char *vertexShaderSource = "#version 330 core\n"
+    "uniform vec3 positionOffset;\n"
     "layout (location = 0) in vec3 aPos;\n"
-    "out vec4 vertexColor;\n"
+    "layout (location = 1) in vec3 aColor;\n"
+    "out vec3 ourColor;\n"
     "void main()\n"
     "{\n"
-    "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-    "   vertexColor = vec4(0.0f, 0.5f, 0.2f, 1.0f);"
+    "   // float distanceValue = sqrt(aPos.x * aPos.x + aPos.y * aPos.y);\n"
+    "   gl_Position = vec4(aPos.x + positionOffset.x, aPos.y + positionOffset.y, 0.0, 1.0);\n"
+    "   ourColor = aColor;"
     "}\0";
 
 const char *fragmentShaderSource = "#version 330 core\n"
-    "in vec4 vertexColor;\n"
+    "in vec3 ourColor;\n"
     "out vec4 FragColor;\n"
     "void main()\n"
     "{\n"
-    "FragColor = vertexColor;\n"
+    "FragColor = vec4(ourColor, 1.0);\n"
     "}\0";
 
 const char *fragmentShaderSourceGreen = "#version 330 core\n"
@@ -34,14 +43,30 @@ const char *fragmentShaderSourceGreen = "#version 330 core\n"
     "FragColor = vec4(0.5f, 0.5f, 0.2f, 1.0f);\n"
     "}\0";
 
-using namespace std;
 void framebuffer_size_callback(GLFWwindow* window,int width, int height);
 void processInput(GLFWwindow *window);
 void drawTriangle(GLFWwindow *window);
 void drawTwoTrians(GLFWwindow *window);
+void drawTriangleWithColor(GLFWwindow *window);
 unsigned int createProgram();
+GLFWwindow* createWindow(int width, int height, string title);
+const char* getCharPath(string stringPath);
 
 int main() {
+    
+    GLFWwindow *window = createWindow(800, 600, "learn OpenGL");
+    drawTriangleWithColor(window);
+    
+    glfwTerminate();
+    return 0;
+}
+/// 获取char*类型路径
+const char* getCharPath(string stringPath) {
+    string str_total = currentPath + stringPath;
+    return str_total.c_str();
+}
+/// 创建窗口
+GLFWwindow* createWindow(int width, int height, string title) {
     // Load GLFW and Create a Window
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -49,26 +74,22 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     
-    GLFWwindow* window = glfwCreateWindow(800, 600, "learn", NULL, NULL);
+    char* titleChar = (char*)title.c_str();
+    GLFWwindow* window = glfwCreateWindow(width, height, titleChar, NULL, NULL);
     if (window == NULL) {
         cout << "failed to load" << endl;
         glfwTerminate();
-        return -1;
     }
     glfwMakeContextCurrent(window);
     
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         cout << "failed to load glad" << endl;
-        return -1;
+        glfwTerminate();
     }
     
-    glViewport(0, 0, 800, 600);
+    glViewport(0, 0, width, height);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    
-    drawTriangle(window);
-    
-    glfwTerminate();
-    return 0;
+    return window;
 }
 /// 窗口大小变更
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -150,6 +171,11 @@ void drawTriangle(GLFWwindow* window) {
 
         // draw our first triangle
         glUseProgram(shaderProgram);
+        // 更新动态颜色
+        float timeValue = glfwGetTime();
+        float greenValue = sin(timeValue)/2.0f + 0.5f;
+        int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
+        glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
         glDrawArrays(GL_TRIANGLES, 0, 3);
         glUseProgram(shaderProgramGreen);
@@ -208,6 +234,57 @@ void drawTwoTrians(GLFWwindow *window) {
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         // glBindVertexArray(0); // no need to unbind it every time
 
+        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+}
+/// 画顶点带颜色属性的三角形
+void drawTriangleWithColor(GLFWwindow *window) {
+    Shader shaderProgram(getCharPath("normal.vs"), getCharPath("normal.fs"));
+    // MARK: - 创建顶点和缓冲对象
+    // 三角形顶点
+    float vertices[] = {
+        // 位置           //颜色
+        0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // 右下
+        -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // 左下
+        0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // 顶部
+    };
+    // VAO对象 VBO对象
+    unsigned int VAO, VBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glBindVertexArray(VAO);
+    // 绑定缓冲
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    // 复制顶点数据
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    // 解析顶点数据
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glBindVertexArray(0);
+    // 循环
+    while (!glfwWindowShouldClose(window))
+    {
+        processInput(window);
+
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        // draw our first triangle
+        float timeValue = glfwGetTime();
+        float xScaleValue = cos(timeValue) * 0.707f;
+        float yScaleValue = sin(timeValue) * 0.707f;
+        float zScaleValue = 0.0f;
+        float scaleValues[3] = {xScaleValue, yScaleValue, zScaleValue};
+        shaderProgram.use();
+        shaderProgram.setVec3("positionOffset", scaleValues);
+        glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        // glBindVertexArray(0); // no need to unbind it every time
+ 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         glfwSwapBuffers(window);
         glfwPollEvents();
