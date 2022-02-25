@@ -16,32 +16,9 @@ using namespace std;
 
 string currentPath = "/Users/talosguo/Glitter/Glitter/Sources/";
 
-const char *vertexShaderSource = "#version 330 core\n"
-    "uniform vec3 positionOffset;\n"
-    "layout (location = 0) in vec3 aPos;\n"
-    "layout (location = 1) in vec3 aColor;\n"
-    "out vec3 ourColor;\n"
-    "void main()\n"
-    "{\n"
-    "   // float distanceValue = sqrt(aPos.x * aPos.x + aPos.y * aPos.y);\n"
-    "   gl_Position = vec4(aPos.x + positionOffset.x, aPos.y + positionOffset.y, 0.0, 1.0);\n"
-    "   ourColor = aColor;"
-    "}\0";
-
-const char *fragmentShaderSource = "#version 330 core\n"
-    "in vec3 ourColor;\n"
-    "out vec4 FragColor;\n"
-    "void main()\n"
-    "{\n"
-    "FragColor = vec4(ourColor, 1.0);\n"
-    "}\0";
-
-const char *fragmentShaderSourceGreen = "#version 330 core\n"
-    "out vec4 FragColor;\n"
-    "void main()\n"
-    "{\n"
-    "FragColor = vec4(0.5f, 0.5f, 0.2f, 1.0f);\n"
-    "}\0";
+const char * normalVS = "/Users/talosguo/Glitter/ShaderPrograms/normal.vs";
+const char * normalFS = "/Users/talosguo/Glitter/ShaderPrograms/normal.fs";
+const char * greenFS = "/Users/talosguo/Glitter/ShaderPrograms/green.fs";
 
 void framebuffer_size_callback(GLFWwindow* window,int width, int height);
 void processInput(GLFWwindow *window);
@@ -59,11 +36,6 @@ int main() {
     
     glfwTerminate();
     return 0;
-}
-/// 获取char*类型路径
-const char* getCharPath(string stringPath) {
-    string str_total = currentPath + stringPath;
-    return str_total.c_str();
 }
 /// 创建窗口
 GLFWwindow* createWindow(int width, int height, string title) {
@@ -101,43 +73,11 @@ void processInput(GLFWwindow *window) {
         glfwSetWindowShouldClose(window, true);
     }
 }
-/// 创建着色器和程序
-unsigned int createProgram(const char *vertexShaderSource, const char *fragmentShaderSource) {
-    // 创建着色器
-    unsigned int vertexShader;
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    // 附加着色器源码
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-    // 检测着色器编译状态
-    int success;
-    char infoLog[512];
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        cout << "ERROR Info\n" << infoLog << endl;
-    }
-    // 片段着色器
-    unsigned int fragmentShader;
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-    // 着色器程序
-    unsigned int shaderProgram;
-    shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-    // 删除着色器对象
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    
-    return shaderProgram;
-}
+
 /// 画三角形
 void drawTriangle(GLFWwindow* window) {
-    unsigned int shaderProgram = createProgram(vertexShaderSource, fragmentShaderSource);
-    unsigned int shaderProgramGreen = createProgram(vertexShaderSource, fragmentShaderSourceGreen);
+    Shader shaderProgram(normalVS, normalFS);
+    Shader shaderProgramGreen(normalVS, greenFS);
     // MARK: - 创建顶点和缓冲对象
     // 三角形顶点
     float vertices[] = {
@@ -170,15 +110,15 @@ void drawTriangle(GLFWwindow* window) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // draw our first triangle
-        glUseProgram(shaderProgram);
+        shaderProgram.use();
         // 更新动态颜色
         float timeValue = glfwGetTime();
         float greenValue = sin(timeValue)/2.0f + 0.5f;
-        int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
-        glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+        float value[4] = {0.0f, greenValue, 0.0f, 1.0f};
+        shaderProgram.setVec4("ourColor", value);
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
         glDrawArrays(GL_TRIANGLES, 0, 3);
-        glUseProgram(shaderProgramGreen);
+        shaderProgramGreen.use();
         glDrawArrays(GL_TRIANGLES, 3, 6);
         // glBindVertexArray(0); // no need to unbind it every time
  
@@ -189,7 +129,7 @@ void drawTriangle(GLFWwindow* window) {
 }
 /// 画两个三角形（四边形）
 void drawTwoTrians(GLFWwindow *window) {
-    unsigned int shaderProgram = createProgram(vertexShaderSource, fragmentShaderSource);
+    Shader shaderProgram(normalVS, normalFS);
     // MARK: - 创建顶点和缓冲对象
     // 四角形顶点
     float vertices[] = {
@@ -227,7 +167,7 @@ void drawTwoTrians(GLFWwindow *window) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // draw our first triangle
-        glUseProgram(shaderProgram);
+        shaderProgram.use();
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
         // 线框模式
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -241,7 +181,7 @@ void drawTwoTrians(GLFWwindow *window) {
 }
 /// 画顶点带颜色属性的三角形
 void drawTriangleWithColor(GLFWwindow *window) {
-    Shader shaderProgram(getCharPath("normal.vs"), getCharPath("normal.fs"));
+    Shader shaderProgram(normalVS, normalFS);
     // MARK: - 创建顶点和缓冲对象
     // 三角形顶点
     float vertices[] = {

@@ -17,6 +17,7 @@
 #include <sstream>
 #include <iostream>
 
+using namespace std;
 
 class Shader {
 public:
@@ -57,6 +58,7 @@ public:
         vertex = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(vertex, 1, &vShaderCode, NULL);
         glCompileShader(vertex);
+        std::cout << vertexPath << std::endl;
         checkCompileErrors(vertex, "VERTEX");
         // fragment Shader
         fragment = glCreateShader(GL_FRAGMENT_SHADER);
@@ -94,6 +96,10 @@ public:
     // ------------------------------------------------------------------------
     void setVec3(const std::string &name, float value[3]) const {
         glUniform3f(glGetUniformLocation(ID, name.c_str()), value[0], value[1], value[2]);
+    }
+    // ------------------------------------------------------------------------
+    void setVec4(const std::string &name, float value[4]) const {
+        glUniform4f(glGetUniformLocation(ID, name.c_str()), value[0], value[1], value[2], value[3]);
     }
 
 private:
