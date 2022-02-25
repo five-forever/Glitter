@@ -25,7 +25,6 @@ void processInput(GLFWwindow *window);
 void drawTriangle(GLFWwindow *window);
 void drawTwoTrians(GLFWwindow *window);
 void drawTriangleWithColor(GLFWwindow *window);
-unsigned int createProgram();
 GLFWwindow* createWindow(int width, int height, string title);
 const char* getCharPath(string stringPath);
 
@@ -73,6 +72,7 @@ void processInput(GLFWwindow *window) {
         glfwSetWindowShouldClose(window, true);
     }
 }
+
 
 /// 画三角形
 void drawTriangle(GLFWwindow* window) {
@@ -127,6 +127,8 @@ void drawTriangle(GLFWwindow* window) {
         glfwPollEvents();
     }
 }
+
+
 /// 画两个三角形（四边形）
 void drawTwoTrians(GLFWwindow *window) {
     Shader shaderProgram(normalVS, normalFS);
@@ -179,6 +181,8 @@ void drawTwoTrians(GLFWwindow *window) {
         glfwPollEvents();
     }
 }
+
+
 /// 画顶点带颜色属性的三角形
 void drawTriangleWithColor(GLFWwindow *window) {
     Shader shaderProgram(normalVS, normalFS);
