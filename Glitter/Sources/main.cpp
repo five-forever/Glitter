@@ -19,19 +19,24 @@ string currentPath = "/Users/talosguo/Glitter/Glitter/Sources/";
 const char * normalVS = "/Users/talosguo/Glitter/ShaderPrograms/normal.vs";
 const char * normalFS = "/Users/talosguo/Glitter/ShaderPrograms/normal.fs";
 const char * greenFS = "/Users/talosguo/Glitter/ShaderPrograms/green.fs";
+const char * textureVS = "/Users/talosguo/Glitter/ShaderPrograms/texture.vs";
+const char * textureFS = "/Users/talosguo/Glitter/ShaderPrograms/texture.fs";
+const char * imgPath = "/Users/talosguo/Glitter/container.jpg";
+const char * hahaImgPath = "/Users/talosguo/Glitter/awesomeface.png";
 
 void framebuffer_size_callback(GLFWwindow* window,int width, int height);
 void processInput(GLFWwindow *window);
 void drawTriangle(GLFWwindow *window);
 void drawTwoTrians(GLFWwindow *window);
 void drawTriangleWithColor(GLFWwindow *window);
+void drawRectWithTexture(GLFWwindow *window);
 GLFWwindow* createWindow(int width, int height, string title);
-const char* getCharPath(string stringPath);
 
+// MARK: - main函数入口
 int main() {
     
     GLFWwindow *window = createWindow(800, 600, "learn OpenGL");
-    drawTriangleWithColor(window);
+    drawRectWithTexture(window);
     
     glfwTerminate();
     return 0;
@@ -74,11 +79,10 @@ void processInput(GLFWwindow *window) {
 }
 
 
-/// 画三角形
+// MARK: - 画三角形
 void drawTriangle(GLFWwindow* window) {
     Shader shaderProgram(normalVS, normalFS);
     Shader shaderProgramGreen(normalVS, greenFS);
-    // MARK: - 创建顶点和缓冲对象
     // 三角形顶点
     float vertices[] = {
         -0.5f, -0.5f,0.0f,
@@ -129,10 +133,9 @@ void drawTriangle(GLFWwindow* window) {
 }
 
 
-/// 画两个三角形（四边形）
+// MARK: - 画两个三角形（四边形）
 void drawTwoTrians(GLFWwindow *window) {
     Shader shaderProgram(normalVS, normalFS);
-    // MARK: - 创建顶点和缓冲对象
     // 四角形顶点
     float vertices[] = {
         0.5f, 0.5f, 0.0f,   // 右上角
@@ -182,11 +185,9 @@ void drawTwoTrians(GLFWwindow *window) {
     }
 }
 
-
-/// 画顶点带颜色属性的三角形
+// MARK: - 画顶点带颜色属性的三角形
 void drawTriangleWithColor(GLFWwindow *window) {
     Shader shaderProgram(normalVS, normalFS);
-    // MARK: - 创建顶点和缓冲对象
     // 三角形顶点
     float vertices[] = {
         // 位置           //颜色
@@ -233,4 +234,110 @@ void drawTriangleWithColor(GLFWwindow *window) {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+}
+// MARK: - 画带纹理的矩形
+void drawRectWithTexture(GLFWwindow *window) {
+    // 生成纹理
+    unsigned int texture1, texture2;
+    glGenTextures(1, &texture1);
+    glBindTexture(GL_TEXTURE_2D, texture1);
+    // 设置环绕、过滤方式
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // 加载并生成纹理, nrChannels为颜色通道的个数
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load(imgPath, &width, &height, &nrChannels, 0);
+    if (data) {
+        // 前面参数为目标设置，后面参数为源数据
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        cout << "Failed to load texture" << endl;
+    }
+    stbi_image_free(data);
+    glGenTextures(1, &texture2);
+    glBindTexture(GL_TEXTURE_2D, texture2);
+    // 设置环绕、过滤方式
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // 加载并生成纹理, nrChannels为颜色通道的个数
+    stbi_set_flip_vertically_on_load(true); // 翻转
+    data = stbi_load(hahaImgPath, &width, &height, &nrChannels, 0);
+    if (data) {
+        // 前面参数为目标设置，后面参数为源数据
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        cout << "Failed to load texture" << endl;
+    }
+    stbi_image_free(data);
+    
+    float vertices[] = {
+    //     ---- 位置 ----       ---- 颜色 ----     - 纹理坐标 -
+         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // 右上
+         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // 右下
+        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // 左下
+        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // 左上
+    };
+    unsigned int indices[] = {
+        0, 1, 3, // first tri
+        1, 2, 3  // second tri
+    };
+    Shader shaderProgram(textureVS, textureFS);
+    // VAO对象 VBO对象
+    unsigned int VAO, VBO, EBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+    glBindVertexArray(VAO);
+    // 绑定缓冲 复制顶点数据
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    // 解析顶点数据
+    // 坐标
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // 颜色
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    // 纹理
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    shaderProgram.use();
+    shaderProgram.setInt("texture1", 0);
+    shaderProgram.setInt("texture2", 1);
+    // 循环
+    while (!glfwWindowShouldClose(window))
+    {
+        processInput(window);
+
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        // 绑定纹理,此处会自动赋值给片段着色器的采样器
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture1);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, texture2);
+        // draw our first triangle
+        shaderProgram.use();
+        glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        // glBindVertexArray(0); // no need to unbind it every time
+
+        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+    // optional: de-allocate all resources once they've outlived their purpose:
+    // ------------------------------------------------------------------------
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
 }

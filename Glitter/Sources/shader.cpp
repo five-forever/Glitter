@@ -58,7 +58,6 @@ public:
         vertex = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(vertex, 1, &vShaderCode, NULL);
         glCompileShader(vertex);
-        std::cout << vertexPath << std::endl;
         checkCompileErrors(vertex, "VERTEX");
         // fragment Shader
         fragment = glCreateShader(GL_FRAGMENT_SHADER);
