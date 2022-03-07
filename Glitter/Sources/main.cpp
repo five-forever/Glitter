@@ -237,13 +237,15 @@ void drawTriangleWithColor(GLFWwindow *window) {
 }
 // MARK: - 画带纹理的矩形
 void drawRectWithTexture(GLFWwindow *window) {
+    // 透明度
+    float alpha = 0;
     // 生成纹理
     unsigned int texture1, texture2;
     glGenTextures(1, &texture1);
     glBindTexture(GL_TEXTURE_2D, texture1);
     // 设置环绕、过滤方式
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // 加载并生成纹理, nrChannels为颜色通道的个数
@@ -278,10 +280,10 @@ void drawRectWithTexture(GLFWwindow *window) {
     
     float vertices[] = {
     //     ---- 位置 ----       ---- 颜色 ----     - 纹理坐标 -
-         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // 右上
-         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // 右下
+         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   2.0f, 2.0f,   // 右上
+         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   2.0f, 0.0f,   // 右下
         -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // 左下
-        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // 左上
+        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 2.0f    // 左上
     };
     unsigned int indices[] = {
         0, 1, 3, // first tri
@@ -316,6 +318,17 @@ void drawRectWithTexture(GLFWwindow *window) {
     // 循环
     while (!glfwWindowShouldClose(window))
     {
+        if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_UP)) {
+            if (alpha < 1.0) {
+                alpha += 0.01;
+            }
+        }
+        if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_DOWN)) {
+            if (alpha > 0) {
+                alpha -= 0.01;
+            }
+        }
+        shaderProgram.setFloat("alpha", alpha);
         processInput(window);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);

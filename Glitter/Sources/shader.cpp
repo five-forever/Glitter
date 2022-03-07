@@ -100,6 +100,10 @@ public:
     void setVec4(const std::string &name, float value[4]) const {
         glUniform4f(glGetUniformLocation(ID, name.c_str()), value[0], value[1], value[2], value[3]);
     }
+    // ------------------------------------------------------------------------
+    void setMat4(const std::string &name, glm::mat4 value) const {
+        
+    }
 
 private:
     // utility function for checking shader compilation/linking errors.
