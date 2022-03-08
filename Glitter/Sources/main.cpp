@@ -14,6 +14,9 @@
 
 using namespace std;
 
+//const unsigned int SCR_WIDTH = 800;
+//const unsigned int SCR_HEIGHT = 600;
+
 string currentPath = "/Users/talosguo/Glitter/Glitter/Sources/";
 
 const char * normalVS = "/Users/talosguo/Glitter/ShaderPrograms/normal.vs";
@@ -77,7 +80,55 @@ void processInput(GLFWwindow *window) {
         glfwSetWindowShouldClose(window, true);
     }
 }
-
+/// 生成并绑定纹理1和纹理2
+void bindTexture(const char * path_1, const char * path_2, Shader shaderProgram) {
+    unsigned int texture1, texture2;
+    glGenTextures(1, &texture1);
+    glBindTexture(GL_TEXTURE_2D, texture1);
+    // 设置环绕、过滤方式
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // 加载并生成纹理, nrChannels为颜色通道的个数
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load(path_1, &width, &height, &nrChannels, 0);
+    if (data) {
+        // 前面参数为目标设置，后面参数为源数据
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        cout << "Failed to load texture" << endl;
+    }
+    stbi_image_free(data);
+    glGenTextures(1, &texture2);
+    glBindTexture(GL_TEXTURE_2D, texture2);
+    // 设置环绕、过滤方式
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // 加载并生成纹理, nrChannels为颜色通道的个数
+    stbi_set_flip_vertically_on_load(true); // 翻转
+    data = stbi_load(path_2, &width, &height, &nrChannels, 0);
+    if (data) {
+        // 前面参数为目标设置，后面参数为源数据
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        cout << "Failed to load texture" << endl;
+    }
+    stbi_image_free(data);
+    
+    shaderProgram.use();
+    shaderProgram.setInt("texture1", 0);
+    shaderProgram.setInt("texture2", 1);
+    // 绑定纹理,此处会自动赋值给片段着色器的采样器
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture1);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, texture2);
+}
 
 // MARK: - 画三角形
 void drawTriangle(GLFWwindow* window) {
@@ -237,53 +288,68 @@ void drawTriangleWithColor(GLFWwindow *window) {
 }
 // MARK: - 画带纹理的矩形
 void drawRectWithTexture(GLFWwindow *window) {
-    // 透明度
-    float alpha = 0;
-    // 生成纹理
-    unsigned int texture1, texture2;
-    glGenTextures(1, &texture1);
-    glBindTexture(GL_TEXTURE_2D, texture1);
-    // 设置环绕、过滤方式
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // 加载并生成纹理, nrChannels为颜色通道的个数
-    int width, height, nrChannels;
-    unsigned char *data = stbi_load(imgPath, &width, &height, &nrChannels, 0);
-    if (data) {
-        // 前面参数为目标设置，后面参数为源数据
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    } else {
-        cout << "Failed to load texture" << endl;
-    }
-    stbi_image_free(data);
-    glGenTextures(1, &texture2);
-    glBindTexture(GL_TEXTURE_2D, texture2);
-    // 设置环绕、过滤方式
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // 加载并生成纹理, nrChannels为颜色通道的个数
-    stbi_set_flip_vertically_on_load(true); // 翻转
-    data = stbi_load(hahaImgPath, &width, &height, &nrChannels, 0);
-    if (data) {
-        // 前面参数为目标设置，后面参数为源数据
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    } else {
-        cout << "Failed to load texture" << endl;
-    }
-    stbi_image_free(data);
     
+//    float vertices[] = {
+//    //     ---- 位置 ----     - 纹理坐标 -
+//         0.5f,  0.5f, 0.0f,   1.0f, 1.0f,   // 右上
+//         0.5f, -0.5f, 0.0f,   1.0f, 0.0f,   // 右下
+//        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f,   // 左下
+//        -0.5f,  0.5f, 0.0f,   0.0f, 1.0f    // 左上
+//    };
     float vertices[] = {
-    //     ---- 位置 ----       ---- 颜色 ----     - 纹理坐标 -
-         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   2.0f, 2.0f,   // 右上
-         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   2.0f, 0.0f,   // 右下
-        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // 左下
-        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 2.0f    // 左上
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+    };
+    glm::vec3 cubePositions[] = {
+      glm::vec3( 0.0f,  0.0f,  0.0f),
+      glm::vec3( 2.0f,  5.0f, -15.0f),
+      glm::vec3(-1.5f, -2.2f, -2.5f),
+      glm::vec3(-3.8f, -2.0f, -12.3f),
+      glm::vec3( 2.4f, -0.4f, -3.5f),
+      glm::vec3(-1.7f,  3.0f, -7.5f),
+      glm::vec3( 1.3f, -2.0f, -2.5f),
+      glm::vec3( 1.5f,  2.0f, -2.5f),
+      glm::vec3( 1.5f,  0.2f, -1.5f),
+      glm::vec3(-1.3f,  1.0f, -1.5f)
     };
     unsigned int indices[] = {
         0, 1, 3, // first tri
@@ -304,17 +370,16 @@ void drawRectWithTexture(GLFWwindow *window) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
     // 解析顶点数据
     // 坐标
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    // 颜色
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
     // 纹理
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-    shaderProgram.use();
-    shaderProgram.setInt("texture1", 0);
-    shaderProgram.setInt("texture2", 1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    // 透明度
+    float alpha = 0;
+
+    bindTexture(imgPath, hahaImgPath, shaderProgram);
+    glEnable(GL_DEPTH_TEST);
     // 循环
     while (!glfwWindowShouldClose(window))
     {
@@ -328,22 +393,45 @@ void drawRectWithTexture(GLFWwindow *window) {
                 alpha -= 0.01;
             }
         }
-        shaderProgram.setFloat("alpha", alpha);
         processInput(window);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        // 绑定纹理,此处会自动赋值给片段着色器的采样器
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//        // 调整变换 位移和旋转的顺序与代码顺序相反
+//        glm::mat4 trans = glm::mat4(1.0f);
+//        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+//        trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
+        // 调整坐标系统矩阵
+        glm::mat4 view = glm::mat4(1.0f);
+        glm::mat4 projection = glm::mat4(1.0f);
+        // 注意，我们将矩阵向我们要进行移动场景的反方向移动。
+        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+        projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
         // draw our first triangle
         shaderProgram.use();
+//        shaderProgram.setMat4("transform", trans);
+        shaderProgram.setMat4("view", view);
+        shaderProgram.setMat4("projection", projection);
+        shaderProgram.setFloat("alpha", alpha);
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        // glBindVertexArray(0); // no need to unbind it every time
+//        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        for(unsigned int i = 0; i < 10; i++)
+        {
+          glm::mat4 model = glm::mat4(1.0f);
+          model = glm::translate(model, cubePositions[i]);
+          float angle = 20.0f * i;
+          model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f) + glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+          shaderProgram.setMat4("model", model);
 
+          glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+//        // 画第二个箱子
+//        float scale = sin(glfwGetTime()) / 2.0 + 0.5;
+//        glm::mat4 trans_2 = glm::mat4(1.0f);
+//        trans_2 = glm::translate(trans_2, glm::vec3(-0.5f, 0.5f, 0.0f));
+//        trans_2 = glm::scale(trans_2, glm::vec3(scale, scale, scale));
+//        shaderProgram.setMat4("transform", trans_2);
+//        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         glfwSwapBuffers(window);
         glfwPollEvents();

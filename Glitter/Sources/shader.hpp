@@ -9,5 +9,7 @@
 #define shader_hpp
 
 #include <stdio.h>
-
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glad/glad.h>
 #endif /* shader_hpp */
