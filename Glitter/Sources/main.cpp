@@ -289,13 +289,6 @@ void drawTriangleWithColor(GLFWwindow *window) {
 // MARK: - 画带纹理的矩形
 void drawRectWithTexture(GLFWwindow *window) {
     
-//    float vertices[] = {
-//    //     ---- 位置 ----     - 纹理坐标 -
-//         0.5f,  0.5f, 0.0f,   1.0f, 1.0f,   // 右上
-//         0.5f, -0.5f, 0.0f,   1.0f, 0.0f,   // 右下
-//        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f,   // 左下
-//        -0.5f,  0.5f, 0.0f,   0.0f, 1.0f    // 左上
-//    };
     float vertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
          0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
@@ -397,24 +390,23 @@ void drawRectWithTexture(GLFWwindow *window) {
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//        // 调整变换 位移和旋转的顺序与代码顺序相反
-//        glm::mat4 trans = glm::mat4(1.0f);
-//        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-//        trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
+        float radius = 1.0f;
+        float camX = sin(glfwGetTime()) * radius;
+        float camZ = cos(glfwGetTime()) * radius;
         // 调整坐标系统矩阵
-        glm::mat4 view = glm::mat4(1.0f);
+        glm::mat4 view = glm::lookAt(glm::vec3(camX, 0.0, camZ),
+                                     glm::vec3(0.0f, 0.0f, 0.0f),
+                                     glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 projection = glm::mat4(1.0f);
         // 注意，我们将矩阵向我们要进行移动场景的反方向移动。
         view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
         projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
         // draw our first triangle
         shaderProgram.use();
-//        shaderProgram.setMat4("transform", trans);
         shaderProgram.setMat4("view", view);
         shaderProgram.setMat4("projection", projection);
         shaderProgram.setFloat("alpha", alpha);
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-//        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         for(unsigned int i = 0; i < 10; i++)
         {
           glm::mat4 model = glm::mat4(1.0f);
@@ -425,13 +417,6 @@ void drawRectWithTexture(GLFWwindow *window) {
 
           glDrawArrays(GL_TRIANGLES, 0, 36);
         }
-//        // 画第二个箱子
-//        float scale = sin(glfwGetTime()) / 2.0 + 0.5;
-//        glm::mat4 trans_2 = glm::mat4(1.0f);
-//        trans_2 = glm::translate(trans_2, glm::vec3(-0.5f, 0.5f, 0.0f));
-//        trans_2 = glm::scale(trans_2, glm::vec3(scale, scale, scale));
-//        shaderProgram.setMat4("transform", trans_2);
-//        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         glfwSwapBuffers(window);
         glfwPollEvents();
