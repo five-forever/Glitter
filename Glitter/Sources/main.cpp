@@ -13,9 +13,24 @@
 #include <iostream>
 
 using namespace std;
+// window
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 600;
+// camera
+glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
 
-//const unsigned int SCR_WIDTH = 800;
-//const unsigned int SCR_HEIGHT = 600;
+bool firstMouse = true;
+float yaw   = -90.0f;    // yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
+float pitch =  0.0f;
+float lastX =  800.0f / 2.0;
+float lastY =  600.0 / 2.0;
+float fov   =  45.0f;
+
+// timing
+float deltaTime = 0.0f;    // time between current frame and last frame
+float lastFrame = 0.0f;
 
 string currentPath = "/Users/talosguo/Glitter/Glitter/Sources/";
 
@@ -34,6 +49,8 @@ void drawTwoTrians(GLFWwindow *window);
 void drawTriangleWithColor(GLFWwindow *window);
 void drawRectWithTexture(GLFWwindow *window);
 GLFWwindow* createWindow(int width, int height, string title);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 // MARK: - main函数入口
 int main() {
@@ -79,6 +96,46 @@ void processInput(GLFWwindow *window) {
     if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_ESCAPE)) {
         glfwSetWindowShouldClose(window, true);
     }
+}
+/// 监听鼠标移动
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+    if(firstMouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos;
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.05;
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw   += xoffset;
+    pitch += yoffset;
+
+    if(pitch > 89.0f)
+        pitch = 89.0f;
+    if(pitch < -89.0f)
+        pitch = -89.0f;
+
+    glm::vec3 front;
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(front);
+}
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+  if(fov >= 1.0f && fov <= 45.0f)
+    fov -= yoffset;
+  if(fov <= 1.0f)
+    fov = 1.0f;
+  if(fov >= 45.0f)
+    fov = 45.0f;
 }
 /// 生成并绑定纹理1和纹理2
 void bindTexture(const char * path_1, const char * path_2, Shader shaderProgram) {
@@ -373,34 +430,40 @@ void drawRectWithTexture(GLFWwindow *window) {
 
     bindTexture(imgPath, hahaImgPath, shaderProgram);
     glEnable(GL_DEPTH_TEST);
+    float deltaTime = 0.0f; // 当前帧与上一帧的时间差
+    float lastFrame = 0.0f; // 上一帧的时间
+    // 鼠标停留
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window, mouse_callback);
     // 循环
     while (!glfwWindowShouldClose(window))
     {
-        if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_UP)) {
-            if (alpha < 1.0) {
-                alpha += 0.01;
-            }
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+        float cameraSpeed = 2.5f * deltaTime; // adjust accordingly
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+            cameraPos += cameraSpeed * cameraFront;
         }
-        if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_DOWN)) {
-            if (alpha > 0) {
-                alpha -= 0.01;
-            }
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+            cameraPos -= cameraSpeed * cameraFront;
+        }
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        }
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
         }
         processInput(window);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        float radius = 1.0f;
-        float camX = sin(glfwGetTime()) * radius;
-        float camZ = cos(glfwGetTime()) * radius;
         // 调整坐标系统矩阵
-        glm::mat4 view = glm::lookAt(glm::vec3(camX, 0.0, camZ),
-                                     glm::vec3(0.0f, 0.0f, 0.0f),
-                                     glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 projection = glm::mat4(1.0f);
-        // 注意，我们将矩阵向我们要进行移动场景的反方向移动。
+        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        // pass projection matrix to shader (note that in this case it could change every frame)
+        glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        // 注意，我们将矩阵向我们要进行移动场景的反方向移动
         view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-        projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
         // draw our first triangle
         shaderProgram.use();
         shaderProgram.setMat4("view", view);
