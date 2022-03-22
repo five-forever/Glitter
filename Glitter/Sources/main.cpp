@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "camera.h"
 using namespace std;
 // window
 const unsigned int SCR_WIDTH = 800;
@@ -24,9 +25,11 @@ glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
 bool firstMouse = true;
 float yaw   = -90.0f;    // yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
 float pitch =  0.0f;
-float lastX =  800.0f / 2.0;
-float lastY =  600.0 / 2.0;
+float lastX = SCR_WIDTH / 2.0f;
+float lastY = SCR_HEIGHT / 2.0f;
 float fov   =  45.0f;
+// camera
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
 // timing
 float deltaTime = 0.0f;    // time between current frame and last frame
@@ -39,6 +42,8 @@ const char * normalFS = "/Users/talosguo/Glitter/ShaderPrograms/normal.fs";
 const char * greenFS = "/Users/talosguo/Glitter/ShaderPrograms/green.fs";
 const char * textureVS = "/Users/talosguo/Glitter/ShaderPrograms/texture.vs";
 const char * textureFS = "/Users/talosguo/Glitter/ShaderPrograms/texture.fs";
+const char * cameraVS = "/Users/talosguo/Glitter/ShaderPrograms/camera.vs";
+const char * cameraFS = "/Users/talosguo/Glitter/ShaderPrograms/camera.fs";
 const char * imgPath = "/Users/talosguo/Glitter/container.jpg";
 const char * hahaImgPath = "/Users/talosguo/Glitter/awesomeface.png";
 
@@ -405,7 +410,7 @@ void drawRectWithTexture(GLFWwindow *window) {
         0, 1, 3, // first tri
         1, 2, 3  // second tri
     };
-    Shader shaderProgram(textureVS, textureFS);
+    Shader shaderProgram(cameraVS, cameraFS);
     // VAO对象 VBO对象
     unsigned int VAO, VBO, EBO;
     glGenVertexArrays(1, &VAO);
@@ -425,13 +430,9 @@ void drawRectWithTexture(GLFWwindow *window) {
     // 纹理
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
-    // 透明度
-    float alpha = 0;
 
     bindTexture(imgPath, hahaImgPath, shaderProgram);
     glEnable(GL_DEPTH_TEST);
-    float deltaTime = 0.0f; // 当前帧与上一帧的时间差
-    float lastFrame = 0.0f; // 上一帧的时间
     // 鼠标停留
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouse_callback);
@@ -441,34 +442,30 @@ void drawRectWithTexture(GLFWwindow *window) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-        float cameraSpeed = 2.5f * deltaTime; // adjust accordingly
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            cameraPos += cameraSpeed * cameraFront;
+            camera.ProcessKeyboard(FORWARD, deltaTime);
         }
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            cameraPos -= cameraSpeed * cameraFront;
+            camera.ProcessKeyboard(BACKWARD, deltaTime);
         }
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+            camera.ProcessKeyboard(LEFT, deltaTime);
         }
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+            camera.ProcessKeyboard(RIGHT, deltaTime);
         }
         processInput(window);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         // 调整坐标系统矩阵
-        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        glm::mat4 view = camera.GetViewMatrix();
         // pass projection matrix to shader (note that in this case it could change every frame)
-        glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        // 注意，我们将矩阵向我们要进行移动场景的反方向移动
-        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         // draw our first triangle
         shaderProgram.use();
         shaderProgram.setMat4("view", view);
         shaderProgram.setMat4("projection", projection);
-        shaderProgram.setFloat("alpha", alpha);
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
         for(unsigned int i = 0; i < 10; i++)
         {
