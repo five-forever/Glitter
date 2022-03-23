@@ -11,12 +11,14 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
-
+#include <thread>
+#include <chrono>
 #include "camera.h"
 using namespace std;
 // window
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
+constexpr int TIME_TO_SLEEP = 10;
 // camera
 glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -54,7 +56,7 @@ void drawTwoTrians(GLFWwindow *window);
 void drawTriangleWithColor(GLFWwindow *window);
 void drawRectWithTexture(GLFWwindow *window);
 GLFWwindow* createWindow(int width, int height, string title);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 // MARK: - main函数入口
@@ -103,8 +105,11 @@ void processInput(GLFWwindow *window) {
     }
 }
 /// 监听鼠标移动
-void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-    if(firstMouse)
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
+    float xpos = static_cast<float>(xposIn);
+    float ypos = static_cast<float>(yposIn);
+
+    if (firstMouse)
     {
         lastX = xpos;
         lastY = ypos;
@@ -112,35 +117,15 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     }
 
     float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos;
+    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+
     lastX = xpos;
     lastY = ypos;
 
-    float sensitivity = 0.05;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw   += xoffset;
-    pitch += yoffset;
-
-    if(pitch > 89.0f)
-        pitch = 89.0f;
-    if(pitch < -89.0f)
-        pitch = -89.0f;
-
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(front);
+    camera.ProcessMouseMovement(xoffset, yoffset);
 }
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-  if(fov >= 1.0f && fov <= 45.0f)
-    fov -= yoffset;
-  if(fov <= 1.0f)
-    fov = 1.0f;
-  if(fov >= 45.0f)
-    fov = 45.0f;
+    camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
 /// 生成并绑定纹理1和纹理2
 void bindTexture(const char * path_1, const char * path_2, Shader shaderProgram) {
@@ -439,6 +424,7 @@ void drawRectWithTexture(GLFWwindow *window) {
     // 循环
     while (!glfwWindowShouldClose(window))
     {
+        std::this_thread::sleep_for(std::chrono::milliseconds(TIME_TO_SLEEP));
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
